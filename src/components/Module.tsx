@@ -1,17 +1,35 @@
-import React from 'react';
-import { Box } from '@mui/material';
-import { useDrag, useDragDropManager } from 'react-dnd';
-import { useRafLoop } from 'react-use';
+import React from "react";
+import { Box } from "@mui/material";
+import { useDrag, useDragDropManager } from "react-dnd";
+import { useRafLoop } from "react-use";
 
-import ModuleInterface from '../types/ModuleInterface';
-import { moduleW2LocalWidth, moduleX2LocalX, moduleY2LocalY } from '../helpers';
+import ModuleInterface from "../types/ModuleInterface";
+import {
+  moduleW2LocalWidth,
+  moduleX2LocalX,
+  moduleY2LocalY,
+  localX2ModuleX,
+  localY2ModuleY,
+} from "../helpers";
 
 type ModuleProps = {
   data: ModuleInterface;
+  updatePosition: (
+    id: number,
+    newCoord: { x: number; y: number; w: number; h: number }
+  ) => void;
+  isLegalPosition: (m: ModuleInterface) => boolean;
 };
 
 const Module = (props: ModuleProps) => {
-  const { data: { id, coord: { x, y, w, h } } } = props;
+  const {
+    data: {
+      id,
+      coord: { x, y, w, h },
+    },
+    updatePosition,
+    isLegalPosition,
+  } = props;
 
   // Transform x, y to left, top
   const [{ top, left }, setPosition] = React.useState(() => ({
@@ -30,26 +48,42 @@ const Module = (props: ModuleProps) => {
       return;
     }
 
-    // Update new position of the module
-    setPosition({
-      top: initialPosition.current.top + movement.y,
-      left: initialPosition.current.left + movement.x,
-    });
+    const moduleX = localX2ModuleX(initialPosition.current.left + movement.x);
+    const moduleY = localY2ModuleY(initialPosition.current.top + movement.y);
+
+    const newTop = moduleY2LocalY(moduleY);
+    const newLeft = moduleX2LocalX(moduleX);
+
+    if (
+      isLegalPosition({
+        id,
+        coord: { x: moduleX, y: moduleY, w, h },
+      })
+    ) {
+      updatePosition(id, { x: moduleX, y: moduleY, w, h });
+      setPosition({
+        top: newTop,
+        left: newLeft,
+      });
+    }
   }, false);
 
   // Wire the module to DnD drag system
-  const [, drag] = useDrag(() => ({
-    type: 'module',
-    item: () => {
-      // Track the initial position at the beginning of the drag operation
-      initialPosition.current = { top, left };
+  const [, drag] = useDrag(
+    () => ({
+      type: "module",
+      item: () => {
+        // Track the initial position at the beginning of the drag operation
+        initialPosition.current = { top, left };
 
-      // Start raf
-      start();
-      return { id };
-    },
-    end: stop,
-  }), [top, left]);
+        // Start raf
+        start();
+        return { id };
+      },
+      end: stop,
+    }),
+    [top, left]
+  );
 
   return (
     <Box
@@ -65,12 +99,12 @@ const Module = (props: ModuleProps) => {
       width={moduleW2LocalWidth(w)}
       height={h}
       sx={{
-        transitionProperty: 'top, left',
-        transitionDuration: '0.1s',
-        '& .resizer': {
+        transitionProperty: "top, left",
+        transitionDuration: "0.1s",
+        "& .resizer": {
           opacity: 0,
         },
-        '&:hover .resizer': {
+        "&:hover .resizer": {
           opacity: 1,
         },
       }}
@@ -82,10 +116,10 @@ const Module = (props: ModuleProps) => {
         justifyContent="center"
         fontSize={40}
         color="#fff"
-        sx={{ cursor: 'move' }}
+        sx={{ cursor: "move" }}
         draggable
       >
-        <Box sx={{ userSelect: 'none', pointerEvents: 'none' }}>{id}</Box>
+        <Box sx={{ userSelect: "none", pointerEvents: "none" }}>{id}</Box>
       </Box>
     </Box>
   );

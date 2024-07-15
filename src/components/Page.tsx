@@ -5,9 +5,11 @@ import { useDrop } from "react-dnd";
 import Grid from "./Grid";
 import Module from "./Module";
 import { GUTTER_SIZE } from "../constants";
+import ModuleInterface from "../types/ModuleInterface";
+import { isLegal, isOverlap } from "../helpers";
 
 const Page = () => {
-  const [modules] = React.useState([
+  const [modules, setModules] = React.useState([
     { id: 1, coord: { x: 1, y: 80, w: 2, h: 200 } },
     { id: 2, coord: { x: 5, y: 0, w: 3, h: 100 } },
     { id: 3, coord: { x: 4, y: 310, w: 3, h: 200 } },
@@ -27,6 +29,27 @@ const Page = () => {
     [modules]
   );
 
+  // Function to update the position of a module
+  const updateModulePosition = (
+    id: number,
+    newCoord: { x: number; y: number; w: number; h: number }
+  ) => {
+    setModules((prevModules) =>
+      prevModules.map((module) =>
+        module.id === id ? { ...module, coord: newCoord } : module
+      )
+    );
+  };
+
+  const isLegalModulePosition = (m: ModuleInterface) => {
+    if (!isLegal(m)) return false;
+    for (let i = 0; i < modules.length; i++) {
+      if (m.id === modules[i].id) continue;
+      if (isOverlap(m, modules[i])) return false;
+    }
+    return true;
+  };
+
   return (
     <Box
       ref={containerRef}
@@ -42,7 +65,12 @@ const Page = () => {
     >
       <Grid height={containerHeight} />
       {modules.map((module) => (
-        <Module key={module.id} data={module} />
+        <Module
+          key={module.id}
+          data={module}
+          updatePosition={updateModulePosition}
+          isLegalPosition={isLegalModulePosition}
+        />
       ))}
     </Box>
   );
